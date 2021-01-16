@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: {{ .Release.Namespace }}
+  name: {{ template "pod-image-patcher.fullname" . }}
+  labels:
+    app: vault-secrets-injector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vault-secrets-injector
+  template:
+    metadata:
+      labels:
+        app: vault-secrets-injector
+      annotations:
+        bifrost.io/skip-image-injection: "true"        
+    spec:
+      serviceAccount: {{ include "pod-image-patcher.serviceAccountName" . }}
+      containers:
+        - name: {{ template "pod-image-patcher.fullname" . }}
+          env:
+            - name: REGISTRY
+              value: {{ .Values.registry.url }}
+            - name: PUBLIC_PROJECT
+              value: {{ .Values.registry.project }}
+            - name: REGISTRY_PROXY_NAME
+              value: {{ .Values.registry.proxy }}
+          image: {{ .Values.image }}:{{ .Values.tag }}
+          imagePullPolicy: Always
+          args:
+          - -sidecarCfgFile=/etc/webhook/config/sidecarconfig.yaml
+          - -tlsCertFile=/etc/webhook/certs/tls.crt
+          - -tlsKeyFile=/etc/webhook/certs/tls.key
+          - -alsologtostderr
+          - -v=4
+          - 2>&1
+          volumeMounts:
+          - name: webhook-certs
+            mountPath: /etc/webhook/certs
+            readOnly: true
+          - name: webhook-config
+            mountPath: /etc/webhook/config
+      volumes:
+      - name: webhook-certs
+        secret:
+          secretName: {{ template "pod-image-patcher.fullname" . }}-validation-webhook-keypair
+      - name: webhook-config
+        configMap:
+          name: {{ template "pod-image-patcher.fullname" . }}-configmap
