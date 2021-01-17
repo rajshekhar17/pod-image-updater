@@ -41,7 +41,7 @@ service:
   port: 80
 webhook:
   ignoreNamespacewithLabels:
-    name: [ kube-system ]
+    name: [ kube-system, istio-system ]
   failurePolicy: Fail
   namespaceLabels: {}
     #sidecar-injection: enabled

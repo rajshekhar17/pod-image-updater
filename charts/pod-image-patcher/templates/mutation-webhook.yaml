@@ -21,7 +21,10 @@ webhooks:
     {{- range $k, $v := .Values.webhook.ignoreNamespacewithLabels }}
     - key: {{ $k }}
       operator: NotIn
-      values: {{ $v }}
+      values:
+      {{- range $k1, $v1 := $v }}
+      - {{ $v1 }}      
+      {{- end }}
     {{- end }}
     {{- end }}
     {{- if .Values.webhook.namespaceLabels }}

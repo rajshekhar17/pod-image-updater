@@ -126,34 +126,20 @@ func mutationRequired(ignoredList []string, kubeObj *corev1.Pod) bool {
 }
 
 func updateAnnotation(target map[string]string, added map[string]string) (patch []patchOperation) {
-	for key, value := range added {
-		if target == nil {
+	if target == nil {
+		patch = append(patch, patchOperation{
+			Op:    "add",
+			Path:  "/metadata/annotations",
+			Value: added, // strings.Replace(key, "/", "~1", -1), value),
+		})
+	} else {
+		for key, value := range added {
 			patch = append(patch, patchOperation{
 				Op:    "add",
-				Path:  "/metadata/annotations",
-				Value: map[string]string{key: value}, // strings.Replace(key, "/", "~1", -1), value),
-			})
-		} else if target[key] == "" {
-			target[key] = value
-			patch = append(patch, patchOperation{
-				Op:    "add",
-				Path:  "/metadata/annotations",
-				Value: target, // strings.Replace(key, "/", "~1", -1), value),
-			})
-		} else {
-			patch = append(patch, patchOperation{
-				Op:    "add",
-				Path:  "/metadata/annotations/" + key,
+				Path:  "/metadata/annotations/" + strings.Replace(key, "/", "~1", -1),
 				Value: value,
 			})
 		}
-	}
-	if len(istioProxyImage) != 0 {
-		patch = append(patch, patchOperation{
-			Op:    "add",
-			Path:  "/metadata/annotations/" + admissionWebhookAnnotationIstio,
-			Value: istioProxyImage,
-		})
 	}
 	return patch
 }
@@ -161,8 +147,6 @@ func updateAnnotation(target map[string]string, added map[string]string) (patch 
 func patchedImage(reqImage string) string {
 	if len(strings.Split(reqImage, "/")) == 1 {
 		return registryURL + "/" + registryProxy + "/" + publicProject + "/" + reqImage
-	} else if !strings.Contains(strings.Split(reqImage, "/")[0], (".")) {
-		return registryURL + "/" + registryProxy + "/" + reqImage
 	} else if strings.Contains(strings.Split(reqImage, "/")[0], ("docker.io")) {
 		if len(strings.Split(reqImage, "/")) == 2 {
 			return registryURL + "/" + registryProxy + "/" + publicProject + "/" + strings.SplitN(reqImage, "/", 2)[1]
@@ -170,6 +154,8 @@ func patchedImage(reqImage string) string {
 		} else {
 			return registryURL + "/" + registryProxy + "/" + strings.SplitN(reqImage, "/", 2)[1]
 		}
+	} else if !strings.Contains(strings.Split(reqImage, "/")[0], (".")) {
+		return registryURL + "/" + registryProxy + "/" + reqImage
 	}
 	return reqImage
 }
@@ -240,8 +226,15 @@ func (whsvr *WebhookServer) mutate(ar *av1.AdmissionReview) *av1.AdmissionRespon
 
 	// Workaround: https://github.com/kubernetes/kubernetes/issues/57982
 	//applyDefaultsWorkaround(whsvr.sidecarConfig.Containers, whsvr.sidecarConfig.Volumes)
+	annotations := make(map[string]string)
+	if len(istioProxyImage) != 0 {
+		annotations = map[string]string{admissionWebhookAnnotationStatusKey: "patched",
+			admissionWebhookAnnotationIstio: istioProxyImage,
+		}
 
-	annotations := map[string]string{admissionWebhookAnnotationStatusKey: "patched"}
+	} else {
+		annotations = map[string]string{admissionWebhookAnnotationStatusKey: "patched"}
+	}
 	patchBytes, err := createPatch(&kubeObj, annotations)
 	if err != nil {
 		return &av1.AdmissionResponse{
