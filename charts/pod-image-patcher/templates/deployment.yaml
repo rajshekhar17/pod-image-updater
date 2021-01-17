@@ -15,7 +15,8 @@ spec:
       labels:
         app: vault-secrets-injector
       annotations:
-        bifrost.io/skip-image-injection: "true"        
+        bifrost.io/skip-image-injection: "true" 
+        releaseTime: {{ dateInZone "2006-01-02 15:04:05Z" (now) "UTC"| quote }}       
     spec:
       serviceAccount: {{ include "pod-image-patcher.serviceAccountName" . }}
       containers:
