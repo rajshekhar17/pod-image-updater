@@ -44,6 +44,6 @@ Create the name of the service account to use
 {{- end -}}
 {{- end -}}
 
-{{- define "pod-image-patcher.service.validationWebhook" -}}
-{{ include "pod-image-patcher.fullname" . }}-validation-webhook
+{{- define "pod-image-patcher.service.mutationWebhook" -}}
+{{ include "pod-image-patcher.fullname" . }}-mutation-webhook
 {{- end -}}
