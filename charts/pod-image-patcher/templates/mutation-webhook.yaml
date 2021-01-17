@@ -1,6 +1,6 @@
-{{- $cn := printf "%s.%s.svc" ( include "pod-image-patcher.service.validationWebhook" . ) .Release.Namespace }}
-{{- $ca := genCA "pod-image-patcher-admission-ca" 3650 -}}
-{{- $altNames := list ( printf "%s" ( include "pod-image-patcher.service.validationWebhook" . ) ) ( printf "%s.%s" ( include "pod-image-patcher.service.validationWebhook" . ) .Release.Namespace ) ( printf "%s.%s.svc" ( include "pod-image-patcher.service.validationWebhook" . ) .Release.Namespace ) -}}
+{{- $cn := printf "%s.%s.svc" ( include "pod-image-patcher.service.mutationWebhook" . ) .Release.Namespace }}
+{{- $ca := genCA "pod-image-patcher-webhook-ca" 3650 -}}
+{{- $altNames := list ( printf "%s" ( include  "pod-image-patcher.service.mutationWebhook" . ) ) ( printf "%s.%s" ( include "pod-image-patcher.service.mutationWebhook"  . ) .Release.Namespace ) ( printf "%s.%s.svc" ( include "pod-image-patcher.service.mutationWebhook" . ) .Release.Namespace ) -}}
 {{- $cert := genSignedCert $cn nil $altNames 3650 $ca -}}
 kind: MutatingWebhookConfiguration
 {{- if .Capabilities.APIVersions.Has "admissionregistration.k8s.io/v1" }}
@@ -9,11 +9,11 @@ apiVersion: admissionregistration.k8s.io/v1
 apiVersion: admissionregistration.k8s.io/v1beta1
 {{- end }}
 metadata:
-  name: {{ template "pod-image-patcher.fullname" . }}-validations
+  name: {{ template "pod-image-patcher.fullname" . }}-mutations
   labels:
     {{- include "pod-image-patcher.metaLabels" . | nindent 4 }}
 webhooks:
-- name: validations.pod-image-patcher.pod-image-patcher
+- name: mutations.pod-image-patcher.pod-image-patcher
   matchPolicy: Equivalent
   namespaceSelector:
     {{- if .Values.webhook.ignoreNamespacewithLabels }}
@@ -53,7 +53,7 @@ webhooks:
   clientConfig:
     caBundle: {{ b64enc $ca.Cert }}
     service:
-      name: {{ template "pod-image-patcher.service.validationWebhook" . }}
+      name: {{ template "pod-image-patcher.service.mutationWebhook" . }}
       namespace: {{ .Release.Namespace }}
       path: /mutate
       port: 443
@@ -62,7 +62,7 @@ webhooks:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ template "pod-image-patcher.service.validationWebhook" . }}
+  name: {{ template "pod-image-patcher.service.mutationWebhook" . }}
   labels:
     {{- include "pod-image-patcher.metaLabels" . | nindent 4 }}
 spec:
@@ -77,7 +77,7 @@ spec:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: {{ template "pod-image-patcher.fullname" . }}-validation-webhook-keypair
+  name: {{ template "pod-image-patcher.fullname" . }}-mutation-webhook-keypair
   labels:
     {{- include "pod-image-patcher.metaLabels" . | nindent 4 }}
 type: kubernetes.io/tls
