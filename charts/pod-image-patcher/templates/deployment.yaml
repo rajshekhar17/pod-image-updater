@@ -46,7 +46,7 @@ spec:
       volumes:
       - name: webhook-certs
         secret:
-          secretName: {{ template "pod-image-patcher.fullname" . }}-validation-webhook-keypair
+          secretName: {{ template "pod-image-patcher.fullname" . }}-mutation-webhook-keypair
       - name: webhook-config
         configMap:
           name: {{ template "pod-image-patcher.fullname" . }}-configmap
