@@ -34,6 +34,7 @@ registry:
   url: core.dev.jugaad-it.io
   proxy: proxy
   project: library
+  istioProxyImage: 
 
 service:
   type: ClusterIP

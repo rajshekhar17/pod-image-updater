@@ -28,6 +28,8 @@ spec:
               value: {{ .Values.registry.project }}
             - name: REGISTRY_PROXY_NAME
               value: {{ .Values.registry.proxy }}
+            - name: ISTIO_PROXY_IMAGE
+              value: {{ .Values.registry.istioProxyImage }}
           image: {{ .Values.image }}:{{ .Values.tag }}
           imagePullPolicy: Always
           args:

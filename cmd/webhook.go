@@ -21,16 +21,16 @@ import (
 )
 
 var (
-	runtimeScheme = runtime.NewScheme()
-	codecs        = serializer.NewCodecFactory(runtimeScheme)
-	deserializer  = codecs.UniversalDeserializer()
-	registryURL   = os.Getenv("REGISTRY")
-	publicProject = os.Getenv("PUBLIC_PROJECT")
-	registryProxy = os.Getenv("REGISTRY_PROXY_NAME")
+	runtimeScheme   = runtime.NewScheme()
+	codecs          = serializer.NewCodecFactory(runtimeScheme)
+	deserializer    = codecs.UniversalDeserializer()
+	registryURL     = os.Getenv("REGISTRY")
+	publicProject   = os.Getenv("PUBLIC_PROJECT")
+	registryProxy   = os.Getenv("REGISTRY_PROXY_NAME")
+	istioProxyImage = os.Getenv("ISTIO_PROXY_IMAGE")
 	// (https://github.com/kubernetes/kubernetes/issues/57982)
-	defaulter       = runtime.ObjectDefaulter(runtimeScheme)
-	insecure, _     = strconv.ParseBool(os.Getenv("VAULT_SKIP_VERIFY"))
-	vaultConfigPath = os.Getenv("VAULT_CONFIG_PATH")
+	defaulter   = runtime.ObjectDefaulter(runtimeScheme)
+	insecure, _ = strconv.ParseBool(os.Getenv("VAULT_SKIP_VERIFY"))
 )
 
 var ignoredNamespaces = []string{
@@ -41,6 +41,7 @@ var ignoredNamespaces = []string{
 const (
 	admissionWebhookAnnotationSkipKey   = "bifrost.io/skip-image-injection"
 	admissionWebhookAnnotationStatusKey = "bifrost.io/image-injection-status"
+	admissionWebhookAnnotationIstio     = "sidecar.istio.io/proxyImage"
 )
 
 type WebhookServer struct {
@@ -126,19 +127,33 @@ func mutationRequired(ignoredList []string, kubeObj *corev1.Pod) bool {
 
 func updateAnnotation(target map[string]string, added map[string]string) (patch []patchOperation) {
 	for key, value := range added {
-		if target == nil || target[key] == "" {
+		if target == nil {
 			patch = append(patch, patchOperation{
 				Op:    "add",
 				Path:  "/metadata/annotations",
 				Value: map[string]string{key: value}, // strings.Replace(key, "/", "~1", -1), value),
 			})
+		} else if target[key] == "" {
+			target[key] = value
+			patch = append(patch, patchOperation{
+				Op:    "add",
+				Path:  "/metadata/annotations",
+				Value: target, // strings.Replace(key, "/", "~1", -1), value),
+			})
 		} else {
 			patch = append(patch, patchOperation{
-				Op:    "replace",
+				Op:    "add",
 				Path:  "/metadata/annotations/" + key,
 				Value: value,
 			})
 		}
+	}
+	if len(istioProxyImage) != 0 {
+		patch = append(patch, patchOperation{
+			Op:    "add",
+			Path:  "/metadata/annotations/" + admissionWebhookAnnotationIstio,
+			Value: istioProxyImage,
+		})
 	}
 	return patch
 }
