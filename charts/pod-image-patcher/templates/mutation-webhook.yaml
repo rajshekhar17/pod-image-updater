@@ -73,7 +73,7 @@ spec:
   - name: webhook
     port: 443
     protocol: TCP
-    targetPort: 8443
+    targetPort: webhook
   selector:
     app: vault-secrets-injector
 ---

@@ -33,11 +33,19 @@ spec:
               value: {{ .Values.registry.istioProxyImage }}
           image: {{ .Values.image }}:{{ .Values.tag }}
           imagePullPolicy: Always
+          ports:                                                                                                                                                                                   
+          - containerPort: {{ .Values.port }}
+          {{- if .Values.hostNetwork }}
+            hostPort: {{ .Values.port }}
+          {{- end }}                                                                                                                                                    
+            name: webhook                                                                                                                                                                             
+            protocol: TCP
           args:
           - -sidecarCfgFile=/etc/webhook/config/sidecarconfig.yaml
           - -tlsCertFile=/etc/webhook/certs/tls.crt
           - -tlsKeyFile=/etc/webhook/certs/tls.key
           - -alsologtostderr
+          - -port={{ .Values.port }}
           - -v=4
           - 2>&1
           volumeMounts:
