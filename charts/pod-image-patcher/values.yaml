@@ -42,8 +42,7 @@ service:
   type: ClusterIP
   port: 80
 webhook:
-  ignoreNamespacewithLabels:
-    name: [ kube-system, istio-system ]
+  ignoreNamespacewithLabels: {}
   failurePolicy: Fail
   namespaceLabels: {}
     #sidecar-injection: enabled
